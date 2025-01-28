@@ -99,9 +99,9 @@
             `Error trying to handle UTM cookies. Error message → ${error}`
         );
     }
-};
+  };
 
-document.addEventListener("DOMContentLoaded", function () {
+  document.addEventListener("DOMContentLoaded", function () {
     try {
         let m8lAnalytics = window.m8lAnalytics || {};
         if (m8lAnalytics["utmCookieCheck"]) {
@@ -114,15 +114,6 @@ document.addEventListener("DOMContentLoaded", function () {
     } catch (error) {
         consoleMsg(consoleProps.types.Error, `Implementation '${error}'`);
     }
-});
+  });
 
-  function init() {
-    getCurrentUtms();
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
 })();
