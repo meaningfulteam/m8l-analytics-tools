@@ -3,20 +3,26 @@
   const COOKIE_TEMP_NAME = "m8l-urls-temp";
 
   function setCookie(name, value, expirationMinutes) {
-    const expires = expirationMinutes ? `expires=${new Date(Date.now() + expirationMinutes * 60 * 1000).toUTCString()}` : "";
+    const expires = expirationMinutes
+      ? `expires=${new Date(
+          Date.now() + expirationMinutes * 60 * 1000
+        ).toUTCString()}`
+      : "";
     document.cookie = `${name}=${JSON.stringify(value)};${expires};path=/`;
   }
 
   function getCookie(name) {
-    const cookies = document.cookie.split(";").map(cookie => cookie.trim());
-    const cookie = cookies.find(cookie => cookie.startsWith(`${name}=`));
+    const cookies = document.cookie.split(";").map((cookie) => cookie.trim());
+    const cookie = cookies.find((cookie) => cookie.startsWith(`${name}=`));
     return cookie ? cookie.substring(name.length + 1) : null;
   }
 
   function getDomain(url) {
     try {
       const urlObj = new URL(url);
-      return `${urlObj.protocol}//${urlObj.hostname}${urlObj.port ? `:${urlObj.port}` : ""}${urlObj.pathname}`;
+      return `${urlObj.protocol}//${urlObj.hostname}${
+        urlObj.port ? `:${urlObj.port}` : ""
+      }${urlObj.pathname}`;
     } catch (e) {
       console.warn("Error parsing URL:", e);
       return "";
@@ -65,9 +71,18 @@
     setCookie(COOKIE_URL_NAME, urlData, 30 * 24 * 60);
   }
 
-  function init() {
-    updateUrlData();
-  }
-
-  init();
+  document.addEventListener("DOMContentLoaded", function () {
+    try {
+      let m8lAnalytics = window.m8lAnalytics || {};
+      if (m8lAnalytics["utmUrlsCheck"]) {
+        try {
+          updateUrlData();
+        } catch (error) {
+            throw new Error("Error updating URL data: " + error);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  });
 })();
