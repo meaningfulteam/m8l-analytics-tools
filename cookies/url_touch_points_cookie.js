@@ -74,22 +74,25 @@
 
       setCookie(COOKIE_URL_NAME, urlData, 30 * 24 * 60);
 
-      // Opcional: exponer los datos para uso externo
-      window.m8lAnalytics = window.m8lAnalytics || {};
-      window.m8lAnalytics.urls = urlData;
     } catch (e) {
       console.warn("Error updating URL data:", e);
     }
   }
 
-  function init() {
-    // Si el DOM ya está cargado, ejecutar inmediatamente
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', updateUrlData);
-    } else {
-      updateUrlData();
-    }
-  }
+  document.addEventListener('DOMContentLoaded', function(){
+    try {
+      let m8lAnalytics = window.m8lAnalytics || {};
+      if (m8lAnalytics["url_touch_points_cookie"]) {
+        try {
+          updateUrlData();
+        } catch (e) {
+          throw new Error("Error updating URL data");
+        };
+      }
 
-  init();
+    } catch (err) {
+      console.warn("Error initializing URL data" + err);
+    }
+  });
+  
 })();

@@ -110,25 +110,19 @@
     }
   }
 
-  function updateUtmData() {
-    try {
-      const utms = getCurrentUtms();
-      if (Object.keys(utms).length > 0) {
-        window.m8lAnalytics = window.m8lAnalytics || {};
-        window.m8lAnalytics.utms = utms;
-      }
-    } catch (e) {
-      console.warn("Error updating UTM data:", e);
-    }
-  }
+  document.addEventListener('DOMContentLoaded', function(){
+        try {
+          let m8lAnalytics = window.m8lAnalytics || {};
+          if (m8lAnalytics["utm_cookies"]) {
+            try {
+              updateUtmData();
+            } catch (err) {
+              throw new Error("Error updating UTM data: " + err);
+            }
+          }
+        } catch (err) {
+          console.warn("Error initializing UTM data: " + err);
+        }
+      });
 
-  function init() {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', updateUtmData);
-    } else {
-      updateUtmData();
-    }
-  }
-
-  init();
 })();
