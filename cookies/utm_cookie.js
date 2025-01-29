@@ -3,19 +3,6 @@
   const UTM_PARAMS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
   const SEARCH_ENGINES = ["google.com", "bing.com", "yahoo.com"];
 
-  // Función para obtener parámetros UTM de la URL
-  function getUrlUtms() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const utms = {};
-    UTM_PARAMS.forEach(param => {
-      const value = urlParams.get(param);
-      if (value) {
-        utms[param] = value;
-      }
-    });
-    return utms;
-  }
-
   function setCookie(name, value, expirationMinutes) {
     const expires = expirationMinutes ? `expires=${new Date(Date.now() + expirationMinutes * 60 * 1000).toUTCString()}` : "";
     document.cookie = `${name}=${JSON.stringify(value)};${expires};path=/`;
@@ -99,22 +86,34 @@
 
   const checkAndHandleUtms = () => {
     try {
-      let utms = getCurrentUtms();
-      if (Object.keys(utms).length > 0) {
-        console.log("UTM parameters found:", utms);
-        // Aquí puedes agregar el código para manejar las UTMs encontradas
-      } else {
-        console.log("No UTM parameters found.");
-      }
+        let utms = getCurrentUtms();
+        if (Object.keys(utms).length > 0) {
+            console.log("UTM parameters found:", utms);
+            // Realiza alguna acción con las UTM encontradas
+        } else {
+            console.log("No UTM parameters found.");
+        }
     } catch (error) {
-      console.error("Error trying to handle UTM cookies:", error);
+        consoleMsg(
+            consoleProps.types.Error,
+            `Error trying to handle UTM cookies. Error message → ${error}`
+        );
     }
   };
 
-  // Ejecutar el script inmediatamente sin esperar a DOMContentLoaded
-  try {
-    checkAndHandleUtms();
-  } catch (error) {
-    console.error("Error in UTM tracking script:", error);
-  }
+  document.addEventListener("DOMContentLoaded", function () {
+    try {
+        let m8lAnalytics = window.m8lAnalytics || {};
+        if (m8lAnalytics["utmCookieCheck"]) {
+            try {
+                checkAndHandleUtms();
+            } catch (err) {
+                throw new Error("UTM Cookie Check Script");
+            }
+        }
+    } catch (error) {
+        consoleMsg(consoleProps.types.Error, `Implementation '${error}'`);
+    }
+  });
+
 })();
