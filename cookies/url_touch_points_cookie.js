@@ -3,26 +3,29 @@
   const COOKIE_TEMP_NAME = "m8l-urls-temp";
 
   function setCookie(name, value, expirationMinutes) {
-    const expires = expirationMinutes
-      ? `expires=${new Date(
-          Date.now() + expirationMinutes * 60 * 1000
-        ).toUTCString()}`
-      : "";
-    document.cookie = `${name}=${JSON.stringify(value)};${expires};path=/`;
+    try {
+      const expires = expirationMinutes ? `expires=${new Date(Date.now() + expirationMinutes * 60 * 1000).toUTCString()}` : "";
+      document.cookie = `${name}=${JSON.stringify(value)};${expires};path=/`;
+    } catch (e) {
+      console.warn("Error setting cookie:", e);
+    }
   }
 
   function getCookie(name) {
-    const cookies = document.cookie.split(";").map((cookie) => cookie.trim());
-    const cookie = cookies.find((cookie) => cookie.startsWith(`${name}=`));
-    return cookie ? cookie.substring(name.length + 1) : null;
+    try {
+      const cookies = document.cookie.split(";").map(cookie => cookie.trim());
+      const cookie = cookies.find(cookie => cookie.startsWith(`${name}=`));
+      return cookie ? cookie.substring(name.length + 1) : null;
+    } catch (e) {
+      console.warn("Error getting cookie:", e);
+      return null;
+    }
   }
 
   function getDomain(url) {
     try {
       const urlObj = new URL(url);
-      return `${urlObj.protocol}//${urlObj.hostname}${
-        urlObj.port ? `:${urlObj.port}` : ""
-      }${urlObj.pathname}`;
+      return `${urlObj.protocol}//${urlObj.hostname}${urlObj.port ? `:${urlObj.port}` : ""}${urlObj.pathname}`;
     } catch (e) {
       console.warn("Error parsing URL:", e);
       return "";
@@ -56,33 +59,37 @@
   }
 
   function updateUrlData() {
-    const currentDomain = getCurrentDomain();
-    const savedData = getSavedUrls();
-    const urlData = {};
+    try {
+      const currentDomain = getCurrentDomain();
+      const savedData = getSavedUrls();
+      const urlData = {};
 
-    urlData.first_url = savedData.first_url || currentDomain;
+      urlData.first_url = savedData.first_url || currentDomain;
 
-    if (isNewSession() || !savedData.last_url) {
-      urlData.last_url = currentDomain;
-    } else {
-      urlData.last_url = savedData.last_url;
+      if (isNewSession() || !savedData.last_url) {
+        urlData.last_url = currentDomain;
+      } else {
+        urlData.last_url = savedData.last_url;
+      }
+
+      setCookie(COOKIE_URL_NAME, urlData, 30 * 24 * 60);
+
+      // Opcional: exponer los datos para uso externo
+      window.m8lAnalytics = window.m8lAnalytics || {};
+      window.m8lAnalytics.urls = urlData;
+    } catch (e) {
+      console.warn("Error updating URL data:", e);
     }
-
-    setCookie(COOKIE_URL_NAME, urlData, 30 * 24 * 60);
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
-    try {
-      let m8lAnalytics = window.m8lAnalytics || {};
-      if (m8lAnalytics["utmUrlsCheck"]) {
-        try {
-          updateUrlData();
-        } catch (error) {
-            throw new Error("Error updating URL data: " + error);
-        }
-      }
-    } catch (error) {
-      console.error(error);
+  function init() {
+    // Si el DOM ya está cargado, ejecutar inmediatamente
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', updateUrlData);
+    } else {
+      updateUrlData();
     }
-  });
+  }
+
+  init();
 })();

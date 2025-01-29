@@ -4,14 +4,23 @@
   const SEARCH_ENGINES = ["google.com", "bing.com", "yahoo.com"];
 
   function setCookie(name, value, expirationMinutes) {
-    const expires = expirationMinutes ? `expires=${new Date(Date.now() + expirationMinutes * 60 * 1000).toUTCString()}` : "";
-    document.cookie = `${name}=${JSON.stringify(value)};${expires};path=/`;
+    try {
+      const expires = expirationMinutes ? `expires=${new Date(Date.now() + expirationMinutes * 60 * 1000).toUTCString()}` : "";
+      document.cookie = `${name}=${JSON.stringify(value)};${expires};path=/`;
+    } catch (e) {
+      console.warn("Error setting cookie:", e);
+    }
   }
 
   function getCookie(name) {
-    const cookies = document.cookie.split(";").map(cookie => cookie.trim());
-    const cookie = cookies.find(cookie => cookie.startsWith(`${name}=`));
-    return cookie ? cookie.substring(name.length + 1) : null;
+    try {
+      const cookies = document.cookie.split(";").map(cookie => cookie.trim());
+      const cookie = cookies.find(cookie => cookie.startsWith(`${name}=`));
+      return cookie ? cookie.substring(name.length + 1) : null;
+    } catch (e) {
+      console.warn("Error getting cookie:", e);
+      return null;
+    }
   }
 
   function getDomain(url) {
@@ -22,6 +31,18 @@
       console.warn("Error parsing URL:", e);
       return "";
     }
+  }
+
+  function getUrlUtms() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const utms = {};
+    UTM_PARAMS.forEach(param => {
+      const value = urlParams.get(param);
+      if (value) {
+        utms[param] = value;
+      }
+    });
+    return utms;
   }
 
   function isFromSearchEngine() {
@@ -52,68 +73,62 @@
   }
 
   function getCurrentUtms() {
-    const urlUtms = getUrlUtms();
-    if (Object.keys(urlUtms).length > 0) {
-      saveUtms(urlUtms);
-      return urlUtms;
-    }
+    try {
+      const urlUtms = getUrlUtms();
+      if (Object.keys(urlUtms).length > 0) {
+        saveUtms(urlUtms);
+        return urlUtms;
+      }
 
-    const savedUtms = getSavedUtms();
-    if (Object.keys(savedUtms).length > 0) {
-      return savedUtms;
-    }
+      const savedUtms = getSavedUtms();
+      if (Object.keys(savedUtms).length > 0) {
+        return savedUtms;
+      }
 
-    if (isFromSearchEngine()) {
-      const organicUtms = {
-        utm_medium: "organic",
-        utm_source: SEARCH_ENGINES.find(engine => document.referrer.includes(engine)) || "search",
-      };
-      saveUtms(organicUtms);
-      return organicUtms;
-    }
+      if (isFromSearchEngine()) {
+        const organicUtms = {
+          utm_medium: "organic",
+          utm_source: SEARCH_ENGINES.find(engine => document.referrer.includes(engine)) || "search",
+        };
+        saveUtms(organicUtms);
+        return organicUtms;
+      }
 
-    if (!document.referrer) {
-      const directUtms = {
-        utm_source: "direct",
-        utm_medium: "(none)",
-      };
-      saveUtms(directUtms);
-      return directUtms;
-    }
+      if (!document.referrer) {
+        const directUtms = {
+          utm_source: "direct",
+          utm_medium: "(none)",
+        };
+        saveUtms(directUtms);
+        return directUtms;
+      }
 
-    return {};
+      return {};
+    } catch (e) {
+      console.warn("Error getting current UTMs:", e);
+      return {};
+    }
   }
 
-  const checkAndHandleUtms = () => {
+  function updateUtmData() {
     try {
-        let utms = getCurrentUtms();
-        if (Object.keys(utms).length > 0) {
-            console.log("UTM parameters found:", utms);
-            // Realiza alguna acción con las UTM encontradas
-        } else {
-            console.log("No UTM parameters found.");
-        }
-    } catch (error) {
-        consoleMsg(
-            consoleProps.types.Error,
-            `Error trying to handle UTM cookies. Error message → ${error}`
-        );
+      const utms = getCurrentUtms();
+      if (Object.keys(utms).length > 0) {
+        window.m8lAnalytics = window.m8lAnalytics || {};
+        window.m8lAnalytics.utms = utms;
+      }
+    } catch (e) {
+      console.warn("Error updating UTM data:", e);
     }
-  };
+  }
 
-  document.addEventListener("DOMContentLoaded", function () {
-    try {
-        let m8lAnalytics = window.m8lAnalytics || {};
-        if (m8lAnalytics["utmCookieCheck"]) {
-            try {
-                checkAndHandleUtms();
-            } catch (err) {
-                throw new Error("UTM Cookie Check Script");
-            }
-        }
-    } catch (error) {
-        consoleMsg(consoleProps.types.Error, `Implementation '${error}'`);
+  function init() {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', updateUtmData);
+    } else {
+      updateUtmData();
     }
-  });
+  }
 
+  init();
 })();
