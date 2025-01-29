@@ -1,5 +1,5 @@
 (function () {
-  const COOKIE_NAME = "utm_cookie";
+  const COOKIE_NAME = "m8l-utms";
   const UTM_PARAMS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
   const SEARCH_ENGINES = ["google.com", "bing.com", "yahoo.com"];
 
