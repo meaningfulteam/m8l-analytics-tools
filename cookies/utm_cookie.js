@@ -84,7 +84,7 @@
     return {};
   }
 
-  function getCurrentUtms() {
+  function updateCurrentUtms() {
     try {
       const urlUtms = getUrlUtms();
       if (Object.keys(urlUtms).length > 0) {
@@ -127,7 +127,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     try {
-      updateUtmData();
+      updateCurrentUtms();
     } catch (err) {
       console.warn("Error initializing UTM data: " + err);
     }
