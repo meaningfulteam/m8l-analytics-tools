@@ -4,7 +4,11 @@
 
   function setCookie(name, value, expirationMinutes) {
     try {
-      const expires = expirationMinutes ? `expires=${new Date(Date.now() + expirationMinutes * 60 * 1000).toUTCString()}` : "";
+      const expires = expirationMinutes
+        ? `expires=${new Date(
+            Date.now() + expirationMinutes * 60 * 1000
+          ).toUTCString()}`
+        : "";
       document.cookie = `${name}=${JSON.stringify(value)};${expires};path=/`;
     } catch (e) {
       console.warn("Error setting cookie:", e);
@@ -13,8 +17,8 @@
 
   function getCookie(name) {
     try {
-      const cookies = document.cookie.split(";").map(cookie => cookie.trim());
-      const cookie = cookies.find(cookie => cookie.startsWith(`${name}=`));
+      const cookies = document.cookie.split(";").map((cookie) => cookie.trim());
+      const cookie = cookies.find((cookie) => cookie.startsWith(`${name}=`));
       return cookie ? cookie.substring(name.length + 1) : null;
     } catch (e) {
       console.warn("Error getting cookie:", e);
@@ -25,7 +29,9 @@
   function getDomain(url) {
     try {
       const urlObj = new URL(url);
-      return `${urlObj.protocol}//${urlObj.hostname}${urlObj.port ? `:${urlObj.port}` : ""}${urlObj.pathname}`;
+      return `${urlObj.protocol}//${urlObj.hostname}${
+        urlObj.port ? `:${urlObj.port}` : ""
+      }${urlObj.pathname}`;
     } catch (e) {
       console.warn("Error parsing URL:", e);
       return "";
@@ -73,26 +79,16 @@
       }
 
       setCookie(COOKIE_URL_NAME, urlData, 30 * 24 * 60);
-
     } catch (e) {
       console.warn("Error updating URL data:", e);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function(){
+  document.addEventListener("DOMContentLoaded", function () {
     try {
-      let m8lAnalytics = window.m8lAnalytics || {};
-      if (m8lAnalytics["url_touch_points_cookie"]) {
-        try {
-          updateUrlData();
-        } catch (e) {
-          throw new Error("Error updating URL data");
-        };
-      }
-
+      updateUrlData();
     } catch (err) {
       console.warn("Error initializing URL data" + err);
     }
   });
-  
 })();
