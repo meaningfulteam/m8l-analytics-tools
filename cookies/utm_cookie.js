@@ -8,6 +8,18 @@
     "utm_content",
   ];
   const SEARCH_ENGINES = ["google.com", "bing.com", "yahoo.com"];
+  const LLM_DOMAINS = [
+    "chatgpt.com",
+    "perplexity.ai",
+    "claude.ai",
+    "grok.com",
+    "gemini.google.com",
+    "deepseek.com"
+    // Add any other relevant LLM domains here
+  ];
+
+  // Add paid traffic indicators
+  const PAID_INDICATORS = ["cpc", "paid", "ppc", "ads", "adwords"];
 
   function setCookie(name, value, expirationMinutes) {
     try {
@@ -63,6 +75,20 @@
     return SEARCH_ENGINES.some((engine) => referrerDomain.includes(engine));
   }
 
+  function isFromLLM() {
+    if (!document.referrer) return false;
+    return LLM_DOMAINS.some((llm) => document.referrer.includes(llm));
+  }
+
+  function isPaidTraffic(utms) {
+    if (!utms) return false;
+    return PAID_INDICATORS.some(indicator => 
+      Object.values(utms).some(value => 
+        value?.toLowerCase().includes(indicator)
+      )
+    );
+  }
+
   function saveUtms(utms) {
     const cookieObj = {};
     UTM_PARAMS.forEach((param) => {
@@ -87,35 +113,59 @@
   function updateCurrentUtms() {
     try {
       const urlUtms = getUrlUtms();
-      if (Object.keys(urlUtms).length > 0) {
+      const referrerDomain = document.referrer ? getDomain(document.referrer) : null;
+
+      // Case 1: Has UTMs and is paid traffic
+      if (Object.keys(urlUtms).length > 0 && isPaidTraffic(urlUtms)) {
+        // Keep the original UTMs but ensure it's marked as paid traffic
         saveUtms(urlUtms);
         return urlUtms;
       }
 
-      const savedUtms = getSavedUtms();
-      if (Object.keys(savedUtms).length > 0) {
-        return savedUtms;
-      }
-
+      // Case 2: Comes from search engine without paid indicators
       if (isFromSearchEngine()) {
+        const searchEngine = SEARCH_ENGINES.find(
+          engine => document.referrer.includes(engine)
+        );
         const organicUtms = {
+          utm_source: searchEngine || "search",
           utm_medium: "organic",
-          utm_source:
-            SEARCH_ENGINES.find((engine) =>
-              document.referrer.includes(engine)
-            ) || "search",
         };
         saveUtms(organicUtms);
         return organicUtms;
       }
 
-      if (!document.referrer) {
+      // Case 3: Comes from an LLM
+      if (isFromLLM()) {
+        const llmSource = LLM_DOMAINS.find(
+          llm => document.referrer.includes(llm)
+        ) || "unknown_llm";
+        const llmUtms = {
+          utm_source: llmSource,
+          utm_medium: "llm",
+        };
+        saveUtms(llmUtms);
+        return llmUtms;
+      }
+
+      // Case 4: Direct traffic (no referrer)
+      if (!referrerDomain) {
         const directUtms = {
           utm_source: "direct",
           utm_medium: "(none)",
         };
         saveUtms(directUtms);
         return directUtms;
+      }
+
+      // Case 5: Other referrer traffic
+      if (referrerDomain) {
+        const referrerUtms = {
+          utm_source: referrerDomain,
+          utm_medium: "referral",
+        };
+        saveUtms(referrerUtms);
+        return referrerUtms;
       }
 
       return {};
