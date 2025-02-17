@@ -20,7 +20,7 @@
   ];
 
   // Add paid traffic indicators
-  const PAID_INDICATORS = ["cpc", "paid", "ppc", "ads", "adwords"];
+  const PAID_INDICATORS = ["cpc", "paid", "ppc", "ads", "adwords", "display", "banner", "sponsored"];
 
   function setCookie(name, value, expirationMinutes) {
     try {
@@ -124,8 +124,36 @@
       const urlUtms = getUrlUtms();
       const referrerDomain = document.referrer ? getDomain(document.referrer) : null;
 
-      // Case 1: Has UTMs in URL (highest priority)
+      // Case 1: Handle paid traffic or traffic with UTMs
       if (Object.keys(urlUtms).length > 0) {
+        // Check if it's paid traffic
+        if (isPaidTraffic(urlUtms)) {
+          urlUtms.utm_source = urlUtms.utm_source || "paid_traffic";
+          
+          // Determine specific paid medium
+          if (urlUtms.utm_medium) {
+            if (urlUtms.utm_medium.includes('cpc') || urlUtms.utm_medium.includes('ppc')) {
+              urlUtms.utm_medium = 'cpc';
+            } else if (urlUtms.utm_medium.includes('display')) {
+              urlUtms.utm_medium = 'display';
+            } else {
+              urlUtms.utm_medium = 'paid';
+            }
+          } else {
+            urlUtms.utm_medium = 'paid';
+          }
+          
+          // Ensure campaign tracking for paid traffic
+          urlUtms.utm_campaign = urlUtms.utm_campaign || 'undefined_campaign';
+        }
+
+        // Ensure all required UTM parameters exist
+        UTM_PARAMS.forEach(param => {
+          if (!urlUtms[param]) {
+            urlUtms[param] = "(not-set)";
+          }
+        });
+
         saveUtms(urlUtms);
         return urlUtms;
       }
@@ -169,7 +197,7 @@
       // Case 5: Other referrer traffic
       if (referrerDomain) {
         const referrerUtms = {
-          utm_source: "referrerDomain:" + referrerDomain,
+          utm_source: referrerDomain,
           utm_medium: "referral",
         };
         saveUtms(referrerUtms);
