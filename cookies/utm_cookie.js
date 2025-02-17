@@ -1,5 +1,6 @@
 (function () {
   const COOKIE_NAME = "m8l-utms";
+  const COOKIE_TEMP_NAME = "m8l-urls-temp";
   const UTM_PARAMS = [
     "utm_source",
     "utm_medium",
@@ -110,19 +111,26 @@
     return {};
   }
 
+  function isNewSession() {
+    if (getCookie(COOKIE_TEMP_NAME)) {
+      return false;
+    }
+    setCookie(COOKIE_TEMP_NAME, "1", 30); // 30 minutes session
+    return true;
+  }
+
   function updateCurrentUtms() {
     try {
       const urlUtms = getUrlUtms();
       const referrerDomain = document.referrer ? getDomain(document.referrer) : null;
 
-      // Case 1: Has UTMs and is paid traffic
-      if (Object.keys(urlUtms).length > 0 && isPaidTraffic(urlUtms)) {
-        // Keep the original UTMs but ensure it's marked as paid traffic
+      // Case 1: Has UTMs in URL (highest priority)
+      if (Object.keys(urlUtms).length > 0) {
         saveUtms(urlUtms);
         return urlUtms;
       }
 
-      // Case 2: Comes from search engine without paid indicators
+      // Case 2: Comes from search engine
       if (isFromSearchEngine()) {
         const searchEngine = SEARCH_ENGINES.find(
           engine => document.referrer.includes(engine)
@@ -161,7 +169,7 @@
       // Case 5: Other referrer traffic
       if (referrerDomain) {
         const referrerUtms = {
-          utm_source: referrerDomain,
+          utm_source: "referrerDomain:" + referrerDomain,
           utm_medium: "referral",
         };
         saveUtms(referrerUtms);
@@ -177,7 +185,9 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     try {
-      updateCurrentUtms();
+      if (isNewSession()) {
+        updateCurrentUtms();
+      }
     } catch (err) {
       console.warn("Error initializing UTM data: " + err);
     }
