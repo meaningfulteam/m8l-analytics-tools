@@ -60,6 +60,14 @@
     }
   }
 
+  function sanitizeValue(value) {
+    if (typeof value !== 'string') return '';
+    return value
+      .slice(0, 500) // Limit string length
+      .replace(/[<>]/g, '') // Remove potential HTML/script tags
+      .trim();
+  }
+
   // Tracking functions
   function getUrlUtms() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -86,9 +94,44 @@
 
   function isPaidTraffic(utms) {
     if (!utms) return false;
-    return PAID_INDICATORS.some(indicator => 
-      Object.values(utms).some(value => 
-        value?.toLowerCase().includes(indicator)
+    
+    // Check for paid indicators in any UTM parameter
+    const paidCampaignIndicators = [
+      'cpc', 'paid', 'ppc', 'ads', 'adwords', 'display', 
+      'banner', 'sponsored', 'social-paid', 'fb-paid', 
+      'linkedin-ads', 'twitter-ads', 'tiktok-ads', 'meta'
+    ];
+    
+    // Check utm_medium specifically for common paid mediums
+    const paidMediums = [
+      'cpc', 'ppc', 'paidsearch', 'paid-social', 'paid_social',
+      'display', 'cpm', 'banner', 'paid', 'social-paid'
+    ];
+    
+    // Check utm_source for ad platforms
+    const paidSources = [
+      'google_ads', 'googleads', 'bing_ads', 'facebook_ads',
+      'linkedin_ads', 'twitter_ads', 'tiktok_ads', 'meta_ads'
+    ];
+
+    return (
+      // Check all UTM values for paid indicators
+      paidCampaignIndicators.some(indicator => 
+        Object.values(utms).some(value => 
+          value?.toLowerCase().includes(indicator)
+        )
+      ) ||
+      // Specific check for utm_medium
+      (utms.utm_medium && 
+        paidMediums.some(medium => 
+          utms.utm_medium.toLowerCase().includes(medium)
+        )
+      ) ||
+      // Specific check for utm_source
+      (utms.utm_source &&
+        paidSources.some(source =>
+          utms.utm_source.toLowerCase().includes(source)
+        )
       )
     );
   }
@@ -119,22 +162,52 @@
         landing_page: currentUrl,
         referrer: referrerDomain || "(none)",
         device: {
-          userAgent: navigator.userAgent,
           language: navigator.language,
           platform: navigator.userAgentData?.platform || navigator.platform || "unknown"
         }
       };
 
-      // Case 1: Has UTMs and is paid traffic
+      // Case 1: Has UTMs (non-paid traffic)
+      if (Object.keys(urlUtms).length > 0 && !isPaidTraffic(urlUtms)) {
+        // Ensure all UTM parameters are set
+        const utmData = {
+          utm_source: urlUtms.utm_source || "(not-set)",
+          utm_medium: urlUtms.utm_medium || "(not-set)",
+          utm_campaign: urlUtms.utm_campaign || "(not-set)",
+          utm_term: urlUtms.utm_term || "(not-set)",
+          utm_content: urlUtms.utm_content || "(not-set)",
+        };
+
+        return {
+          ...trackingData,
+          ...utmData,
+          traffic_type: "url_utm"
+        };
+      }
+
+      // Case 2: Paid traffic with UTMs
       if (Object.keys(urlUtms).length > 0 && isPaidTraffic(urlUtms)) {
+        // Determine specific paid medium
+        let paidMedium = 'paid';
+        if (urlUtms.utm_medium) {
+          if (urlUtms.utm_medium.includes('cpc') || urlUtms.utm_medium.includes('ppc')) {
+            paidMedium = 'cpc';
+          } else if (urlUtms.utm_medium.includes('display')) {
+            paidMedium = 'display';
+          }
+        }
+
         return {
           ...trackingData,
           ...urlUtms,
+          utm_source: urlUtms.utm_source || "paid_traffic",
+          utm_medium: paidMedium,
+          utm_campaign: urlUtms.utm_campaign || "undefined_campaign",
           traffic_type: "paid"
         };
       }
 
-      // Case 2: Comes from search engine without paid indicators
+      // Case 3: Comes from search engine without paid indicators
       if (isFromSearchEngine()) {
         const searchEngine = SEARCH_ENGINES.find(
           engine => document.referrer.includes(engine)
@@ -147,20 +220,20 @@
         };
       }
 
-      // Case 3: Comes from an LLM
+      // Case 4: Comes from an LLM
       if (isFromLLM()) {
         const llmSource = LLM_DOMAINS.find(
           llm => document.referrer.includes(llm)
         ) || "unknown_llm";
         return {
           ...trackingData,
-          utm_source: llmSource,
+          utm_source: llmSource || "unknown_llm",
           utm_medium: "llm",
           traffic_type: "llm"
         };
       }
 
-      // Case 4: Direct traffic
+      // Case 5: Direct traffic
       if (!referrerDomain) {
         return {
           ...trackingData,
@@ -170,7 +243,7 @@
         };
       }
 
-      // Case 5: Other referrer traffic
+      // Case 6: Other referrer traffic
       return {
         ...trackingData,
         utm_source: referrerDomain,
