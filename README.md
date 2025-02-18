@@ -6,13 +6,14 @@ A lightweight JavaScript library for tracking and analyzing user traffic data th
 
 Add the following scripts to your website's `<head>` tag:
 
-html
+```html
 <!-- Main tracking script -->
 <script src="https://cdn.jsdelivr.net/gh/your-repo/m8l-analytics-tools@latest/cookies/tracking_cookies.js"></script>
 <!-- UTM tracking script -->
 <script src="https://cdn.jsdelivr.net/gh/your-repo/m8l-analytics-tools@latest/cookies/utm_cookie.js"></script>
 <!-- URL tracking script -->
 <script src="https://cdn.jsdelivr.net/gh/your-repo/m8l-analytics-tools@latest/cookies/url_touch_points_cookie.js"></script>
+```
 
 ## Cookies Module
 
@@ -61,25 +62,26 @@ Features:
 
 ### First/Last Touch Cookie Structure
 
-json
+```json
 {
-"timestamp": "2024-03-21T10:30:00.000Z",
-"landing_page": "https://example.com/page",
-"referrer": "https://google.com",
-"traffic_type": "organic|paid|direct|referral|llm",
-"utm_source": "google",
-"utm_medium": "organic",
-"utm_campaign": "spring_sale",
-"device": {
-"language": "en-US",
-"platform": "Windows"
-},
-"touch_type": "first_touch|last_touch"
+  "timestamp": "2024-03-21T10:30:00.000Z",
+  "landing_page": "https://example.com/page",
+  "referrer": "https://google.com",
+  "traffic_type": "organic|paid|direct|referral|llm",
+  "utm_source": "google",
+  "utm_medium": "organic",
+  "utm_campaign": "spring_sale",
+  "device": {
+    "language": "en-US",
+    "platform": "Windows"
+  },
+  "touch_type": "first_touch|last_touch"
 }
+```
 
 ### UTM Cookie Structure
 
-json
+```json
 {
   "utm_source": "google",
   "utm_medium": "cpc",
@@ -87,14 +89,16 @@ json
   "utm_term": "product",
   "utm_content": "banner1"
 }
+```
 
 ### URL Cookie Structure
 
-json
+```json
 {
   "first_url": "https://example.com/landing",
   "last_url": "https://example.com/product"
 }
+```
 
 ## Features
 
