@@ -109,3 +109,37 @@ Features:
 - First and last touch attribution
 - Clean and maintainable codebase
 - Cross-browser compatibility
+
+## Form Integration
+
+### form_script.js
+
+Add this script to pages with forms to automatically populate UTM parameters into hidden form fields:
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/your-repo/m8l-analytics-tools@latest/form_scripts/form_script.js"></script>
+```
+
+Features:
+- Automatically populates form fields with UTM data from cookies
+- Supports hidden form fields with IDs matching UTM parameters:
+  - utm_source
+  - utm_medium
+  - utm_campaign
+  - utm_content
+  - utm_term
+
+Example form implementation:
+
+```html
+<form>
+  <!-- Your visible form fields -->
+  <input type="hidden" id="utm_source">
+  <input type="hidden" id="utm_medium">
+  <input type="hidden" id="utm_campaign">
+  <input type="hidden" id="utm_content">
+  <input type="hidden" id="utm_term">
+</form>
+```
+
+The script will automatically populate these hidden fields with UTM values from cookies when the page loads.
