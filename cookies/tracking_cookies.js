@@ -24,6 +24,12 @@
   const PAID_INDICATORS = ["cpc", "paid", "ppc", "ads", "adwords"];
 
   // Common utility functions
+  /**
+   * Sets a cookie with the given name, value, and expiration time
+   * @param {string} name - The name of the cookie
+   * @param {any} value - The value to store (will be JSON stringified)
+   * @param {number} expirationMinutes - Minutes until the cookie expires (optional)
+   */
   function setCookie(name, value, expirationMinutes) {
     try {
       const expires = expirationMinutes
@@ -37,6 +43,11 @@
     }
   }
 
+  /**
+   * Gets the value of a cookie by name
+   * @param {string} name - The name of the cookie to retrieve
+   * @returns {any|null} The parsed value of the cookie or null if not found/error
+   */
   function getCookie(name) {
     try {
       const cookies = document.cookie.split(";").map((cookie) => cookie.trim());
@@ -48,6 +59,11 @@
     }
   }
 
+  /**
+   * Extracts the domain from a URL
+   * @param {string} url - The URL to parse
+   * @returns {string} The domain with protocol, hostname, port and pathname
+   */
   function getDomain(url) {
     try {
       const urlObj = new URL(url);
@@ -60,15 +76,11 @@
     }
   }
 
-  function sanitizeValue(value) {
-    if (typeof value !== 'string') return '';
-    return value
-      .slice(0, 500) // Limit string length
-      .replace(/[<>]/g, '') // Remove potential HTML/script tags
-      .trim();
-  }
-
   // Tracking functions
+  /**
+   * Extracts UTM parameters from the current URL
+   * @returns {Object} Object containing UTM parameters if present
+   */
   function getUrlUtms() {
     const urlParams = new URLSearchParams(window.location.search);
     const utms = {};
@@ -81,17 +93,30 @@
     return utms;
   }
 
+  /**
+   * Checks if the referrer is a known search engine
+   * @returns {boolean} True if the referrer is a search engine
+   */
   function isFromSearchEngine() {
     if (!document.referrer) return false;
     const referrerDomain = getDomain(document.referrer);
     return SEARCH_ENGINES.some((engine) => referrerDomain.includes(engine));
   }
 
+  /**
+   * Checks if the referrer is a known LLM (Large Language Model) domain
+   * @returns {boolean} True if the referrer is from an LLM domain
+   */
   function isFromLLM() {
     if (!document.referrer) return false;
     return LLM_DOMAINS.some((llm) => document.referrer.includes(llm));
   }
 
+  /**
+   * Determines if the traffic came from a paid source based on UTM parameters
+   * @param {Object} utms - UTM parameters object
+   * @returns {boolean} True if the traffic appears to be from a paid source
+   */
   function isPaidTraffic(utms) {
     if (!utms) return false;
     
@@ -136,10 +161,27 @@
     );
   }
 
+  /**
+   * Gets the domain of the current page
+   * @returns {string} The domain of the current page
+   */
   function getCurrentDomain() {
     return getDomain(window.location.href);
   }
 
+  /**
+   * Checks if this is a new user session by looking for a temporary cookie
+   * 
+   * If the temporary cookie exists, it means the user is in an existing session,
+   * so return false. Otherwise, set the temporary cookie and return true to 
+   * indicate this is a new session.
+   * 
+   * The temporary cookie (URL_TEMP_COOKIE_NAME) acts as a session marker that
+   * expires when the browser is closed, allowing us to track new vs returning 
+   * sessions.
+   * 
+   * @returns {boolean} True if this is a new session, false if existing session
+   */
   function isNewSession() {
     if (getCookie(URL_TEMP_COOKIE_NAME)) {
       return false;
@@ -149,6 +191,10 @@
     }
   }
 
+  /**
+   * Collects comprehensive traffic data based on referrer, UTMs, and other signals
+   * @returns {Object|null} Complete traffic data object or null if an error occurs
+   */
   function getTrafficData() {
     try {
       const urlUtms = getUrlUtms();
@@ -256,6 +302,10 @@
     }
   }
 
+  /**
+   * Updates first touch and last touch cookies with traffic attribution data
+   * First touch is set only once per user, last touch updates on new sessions
+   */
   function updateTouchPoints() {
     try {
       const trafficData = getTrafficData();
@@ -270,8 +320,11 @@
         }, 365 * 24 * 60); // 1 year
       }
 
-      // Always update last touch if it's a new session
-      if (isNewSession()) {
+      // Update last touch only if it doesn't exist or if it's a new session
+      const lastTouch = getCookie(LAST_TOUCH_COOKIE);
+      if (!lastTouch || isNewSession()) {
+        // Log session info
+        trafficData.is_new_session = isNewSession();
         setCookie(LAST_TOUCH_COOKIE, {
           ...trafficData,
           touch_type: "last_touch"
