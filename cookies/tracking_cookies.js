@@ -322,13 +322,13 @@
 
       // Update last touch only if it doesn't exist or if it's a new session
       const lastTouch = getCookie(LAST_TOUCH_COOKIE);
-      if (!lastTouch || isNewSession()) {
+      if (!lastTouch) {
         // Log session info
         trafficData.is_new_session = isNewSession();
         setCookie(LAST_TOUCH_COOKIE, {
           ...trafficData,
           touch_type: "last_touch"
-        }, 30 * 24 * 60); // 30 days
+        }); // Session cookie (expires when browser closes)
       }
     } catch (e) {
       console.warn("Error updating touch points:", e);
