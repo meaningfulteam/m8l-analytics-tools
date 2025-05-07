@@ -388,6 +388,7 @@
       console.warn("Error updating touch points:", e);
     }
   }
+  
 
   // Initialize tracking
   document.addEventListener("DOMContentLoaded", function () {
