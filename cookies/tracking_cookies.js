@@ -3,6 +3,7 @@
   const FIRST_TOUCH_COOKIE = "m8l-first-touch";
   const LAST_TOUCH_COOKIE = "m8l-last-touch";
   const URL_TEMP_COOKIE_NAME = "m8l-urls-temp";
+  const PATH_HISTORY_COOKIE = "m8l-path-history"; // New constant for path tracking
   
   const UTM_PARAMS = [
     "utm_source",
@@ -21,8 +22,33 @@
     "gemini.google.com",
     "deepseek.com"
   ];
-  const PAID_INDICATORS = ["cpc", "paid", "ppc", "ads", "adwords"];
 
+  // Check for paid indicators in any UTM parameter
+  const paidCampaignIndicators = [
+    "cpc",
+    "paid",
+    "ppc",
+    "ads",
+    "adwords",
+    "display",
+    "banner",
+    "sponsored",
+    "social-paid",
+    "fb-paid",
+    "paidsearch",
+    "paid-social",
+    "paid_social",
+    "cpm",
+    "google_ads",
+    "googleads",
+    "bing_ads",
+    "facebook_ads",
+    "linkedin_ads",
+    "twitter_ads",
+    "tiktok_ads",
+    "meta_ads",
+  ];
+  
   // Common utility functions
   /**
    * Sets a cookie with the given name, value, and expiration time
@@ -62,14 +88,12 @@
   /**
    * Extracts the domain from a URL
    * @param {string} url - The URL to parse
-   * @returns {string} The domain with protocol, hostname, port and pathname
+   * @returns {string} The hostname from the URL (e.g., "www.example.com")
    */
   function getDomain(url) {
     try {
       const urlObj = new URL(url);
-      return `${urlObj.protocol}//${urlObj.hostname}${
-        urlObj.port ? `:${urlObj.port}` : ""
-      }${urlObj.pathname}`;
+      return urlObj.hostname;
     } catch (e) {
       console.warn("Error parsing URL:", e);
       return "";
@@ -109,7 +133,8 @@
    */
   function isFromLLM() {
     if (!document.referrer) return false;
-    return LLM_DOMAINS.some((llm) => document.referrer.includes(llm));
+    const referrerHostname = getDomain(document.referrer);
+    return LLM_DOMAINS.some((llm) => referrerHostname.includes(llm));
   }
 
   /**
@@ -119,43 +144,12 @@
    */
   function isPaidTraffic(utms) {
     if (!utms) return false;
-    
-    // Check for paid indicators in any UTM parameter
-    const paidCampaignIndicators = [
-      'cpc', 'paid', 'ppc', 'ads', 'adwords', 'display', 
-      'banner', 'sponsored', 'social-paid', 'fb-paid', 
-      'linkedin-ads', 'twitter-ads', 'tiktok-ads', 'meta'
-    ];
-    
-    // Check utm_medium specifically for common paid mediums
-    const paidMediums = [
-      'cpc', 'ppc', 'paidsearch', 'paid-social', 'paid_social',
-      'display', 'cpm', 'banner', 'paid', 'social-paid'
-    ];
-    
-    // Check utm_source for ad platforms
-    const paidSources = [
-      'google_ads', 'googleads', 'bing_ads', 'facebook_ads',
-      'linkedin_ads', 'twitter_ads', 'tiktok_ads', 'meta_ads'
-    ];
 
     return (
       // Check all UTM values for paid indicators
       paidCampaignIndicators.some(indicator => 
         Object.values(utms).some(value => 
           value?.toLowerCase().includes(indicator)
-        )
-      ) ||
-      // Specific check for utm_medium
-      (utms.utm_medium && 
-        paidMediums.some(medium => 
-          utms.utm_medium.toLowerCase().includes(medium)
-        )
-      ) ||
-      // Specific check for utm_source
-      (utms.utm_source &&
-        paidSources.some(source =>
-          utms.utm_source.toLowerCase().includes(source)
         )
       )
     );
@@ -165,8 +159,8 @@
    * Gets the domain of the current page
    * @returns {string} The domain of the current page
    */
-  function getCurrentDomain() {
-    return getDomain(window.location.href);
+  function getCurrentUrl() {
+    return window.location.href;
   }
 
   /**
@@ -190,6 +184,35 @@
       return true;
     }
   }
+    
+  /**
+   * Tracks the current page in the user's browsing history
+   * This is separate from attribution to ensure we always record the path
+   * regardless of attribution rules
+   */
+  function trackPageView() {
+    try {
+      const currentUrl = window.location.href;
+      const pathHistory = getCookie(PATH_HISTORY_COOKIE) || [];
+      
+      // Limit history size to avoid cookie size issues
+      const MAX_HISTORY = 25;
+      
+      // Only add if not already the last page viewed (avoid duplicates)
+      if (pathHistory.length === 0 || pathHistory[pathHistory.length - 1] !== currentUrl) {
+        // Add current URL to history
+        pathHistory.push(currentUrl);
+        
+        // Keep only the most recent entries
+        const trimmedHistory = pathHistory.slice(-MAX_HISTORY);
+        
+        // Save updated history - lasts for 30 days
+        setCookie(PATH_HISTORY_COOKIE, trimmedHistory, 30 * 24 * 60);
+      }
+    } catch (e) {
+      console.warn("Error tracking page view:", e);
+    }
+  }
 
   /**
    * Collects comprehensive traffic data based on referrer, UTMs, and other signals
@@ -197,16 +220,40 @@
    */
   function getTrafficData() {
     try {
+      // Get all data at the beginning of the function
       const urlUtms = getUrlUtms();
-      const referrerDomain = document.referrer ? getDomain(document.referrer) : null;
+      const referrerUrl = document.referrer;
+      const referrerHostname = referrerUrl ? getDomain(referrerUrl) : null;
       const currentTimestamp = new Date().toISOString();
-      const currentUrl = getCurrentDomain();
-
+      const currentLandingPageUrl = getCurrentUrl();
+      const currentSiteHostname = window.location.hostname;
+      
+      // Check if this is internal navigation
+      const isInternalNavigation = referrerHostname === currentSiteHostname;
+      
+      // For internal navigation, try to reuse the existing attribution data 
+      // instead of creating new attribution
+      if (isInternalNavigation) {
+        const lastTouch = getCookie(LAST_TOUCH_COOKIE);
+        if (lastTouch) {
+          // Return the existing attribution data with updated current page
+          return {
+            ...lastTouch,
+            current_page: currentLandingPageUrl,
+            previous_page: referrerUrl,
+            is_internal_navigation: true,
+            timestamp: currentTimestamp // Update timestamp
+          };
+        }
+      }
+      
       // Base tracking data
       const trackingData = {
         timestamp: currentTimestamp,
-        landing_page: currentUrl,
-        referrer: referrerDomain || "(none)",
+        landing_page: currentLandingPageUrl,
+        entry_page: currentLandingPageUrl, // Store the original entry page
+        referrer: referrerUrl || "(none)",
+        is_internal_navigation: false, // Mark as external traffic
         device: {
           language: navigator.language,
           platform: navigator.userAgentData?.platform || navigator.platform || "unknown"
@@ -215,7 +262,6 @@
 
       // Case 1: Has UTMs (non-paid traffic)
       if (Object.keys(urlUtms).length > 0 && !isPaidTraffic(urlUtms)) {
-        // Ensure all UTM parameters are set
         const utmData = {
           utm_source: urlUtms.utm_source || "(not-set)",
           utm_medium: urlUtms.utm_medium || "(not-set)",
@@ -223,26 +269,20 @@
           utm_term: urlUtms.utm_term || "(not-set)",
           utm_content: urlUtms.utm_content || "(not-set)",
         };
-
-        return {
-          ...trackingData,
-          ...utmData,
-          traffic_type: "url_utm"
-        };
+        return { ...trackingData, ...utmData, traffic_type: "url_utm" };
       }
 
       // Case 2: Paid traffic with UTMs
       if (Object.keys(urlUtms).length > 0 && isPaidTraffic(urlUtms)) {
-        // Determine specific paid medium
         let paidMedium = 'paid';
         if (urlUtms.utm_medium) {
-          if (urlUtms.utm_medium.includes('cpc') || urlUtms.utm_medium.includes('ppc')) {
+          const mediumLower = urlUtms.utm_medium.toLowerCase();
+          if (mediumLower.includes('cpc') || mediumLower.includes('ppc')) {
             paidMedium = 'cpc';
-          } else if (urlUtms.utm_medium.includes('display')) {
+          } else if (mediumLower.includes('display')) {
             paidMedium = 'display';
           }
         }
-
         return {
           ...trackingData,
           ...urlUtms,
@@ -253,10 +293,10 @@
         };
       }
 
-      // Case 3: Comes from search engine without paid indicators
+      // Case 3: Comes from search engine
       if (isFromSearchEngine()) {
         const searchEngine = SEARCH_ENGINES.find(
-          engine => document.referrer.includes(engine)
+          engine => referrerHostname && referrerHostname.includes(engine)
         );
         return {
           ...trackingData,
@@ -269,18 +309,18 @@
       // Case 4: Comes from an LLM
       if (isFromLLM()) {
         const llmSource = LLM_DOMAINS.find(
-          llm => document.referrer.includes(llm)
+          llm => referrerHostname && referrerHostname.includes(llm)
         ) || "unknown_llm";
         return {
           ...trackingData,
-          utm_source: llmSource || "unknown_llm",
+          utm_source: llmSource,
           utm_medium: "llm",
           traffic_type: "llm"
         };
       }
 
-      // Case 5: Direct traffic
-      if (!referrerDomain) {
+      // Case 5: Direct traffic (no referrer at all)
+      if (!referrerHostname) {
         return {
           ...trackingData,
           utm_source: "direct",
@@ -289,10 +329,10 @@
         };
       }
 
-      // Case 6: Other referrer traffic
+      // Case 6: External referrer traffic
       return {
         ...trackingData,
-        utm_source: referrerDomain,
+        utm_source: referrerHostname,
         utm_medium: "referral",
         traffic_type: "referral"
       };
@@ -309,26 +349,40 @@
   function updateTouchPoints() {
     try {
       const trafficData = getTrafficData();
-      if (!trafficData) return;
-
+      if (!trafficData) return; // Shouldn't happen with our new design, but keep as safety
+      
+      // If this is internal navigation, we just want to update page history
+      // but NOT change the original attribution data
+      if (trafficData.is_internal_navigation) {
+        // Don't update first or last touch cookies for internal navigation
+        return;
+      }
+      
+      // Handle external traffic (original referrers)
+      
       // Update first touch only if it doesn't exist
       const firstTouch = getCookie(FIRST_TOUCH_COOKIE);
       if (!firstTouch) {
         setCookie(FIRST_TOUCH_COOKIE, {
           ...trafficData,
-          touch_type: "first_touch"
+          touch_type: "first_touch",
+          entry_point: trafficData.landing_page // Store original entry URL
         }, 365 * 24 * 60); // 1 year
       }
-
-      // Update last touch only if it doesn't exist or if it's a new session
+      
+      // For last touch, check if it's a new session
+      const isNewUserSession = isNewSession();
       const lastTouch = getCookie(LAST_TOUCH_COOKIE);
-      if (!lastTouch) {
-        // Log session info
-        trafficData.is_new_session = isNewSession();
+      
+      // Update last touch if new session or it doesn't exist
+      if (!lastTouch || isNewUserSession) {
+        // Set last touch with session info
         setCookie(LAST_TOUCH_COOKIE, {
           ...trafficData,
-          touch_type: "last_touch"
-        }); // Session cookie (expires when browser closes)
+          touch_type: "last_touch",
+          is_new_session: isNewUserSession,
+          entry_point: trafficData.landing_page
+        }); // Session cookie
       }
     } catch (e) {
       console.warn("Error updating touch points:", e);
@@ -338,9 +392,13 @@
   // Initialize tracking
   document.addEventListener("DOMContentLoaded", function () {
     try {
+      // Track page view in history before anything else
+      trackPageView();
+      
+      // Standard attribution tracking
       updateTouchPoints();
     } catch (err) {
       console.warn("Error initializing tracking data:", err);
     }
   });
-})(); 
+})();

@@ -55,6 +55,7 @@ function populateFormFields() {
     // Populate each field with combined data
     allFields.forEach(field => {
       const element = document.getElementById(field);
+      console.log(`Looking for element with ID: ${field}. Found:`, element);
       if (element) {
         const firstValue = firstTouch[field] || '';
         const lastValue = lastTouch[field] || '';
@@ -78,9 +79,97 @@ function populateFormFields() {
   }
 }
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', populateFormFields);
-} else {
-  populateFormFields();
+/**
+ * Attempts to populate form fields once they are available in the DOM.
+ * Uses polling to wait for a key element ('utm_source' by default).
+ */
+function tryPopulateFormFields() {
+  const keyFieldId = 'utm_source'; // A representative field to check for existence
+  const keyElement = document.getElementById(keyFieldId);
+  
+  if (!keyElement) {
+    console.log(`Key form field #${keyFieldId} not found yet. Waiting...`);
+    return false; // Indicate that fields are not ready
+  }
+
+  console.log(`Key form field #${keyFieldId} found. Proceeding to populate fields.`);
+
+  try {
+    const firstTouch = getCookie(FIRST_TOUCH_COOKIE) || {};
+    const lastTouch = getCookie(LAST_TOUCH_COOKIE) || {};
+    
+    // Standard UTM fields to populate
+    const utmFields = [
+      'utm_source',
+      'utm_medium', 
+      'utm_campaign',
+      'utm_content',
+      'utm_term'
+    ];
+    
+    // Additional attribution fields to populate if they exist
+    const additionalFields = [
+      'traffic_type',
+      'landing_page',
+      'referrer',
+      'timestamp'
+    ];
+    
+    // Combine both field sets
+    const allFields = [...utmFields, ...additionalFields];
+    
+    // Populate each field with combined data
+    allFields.forEach(field => {
+      const element = document.getElementById(field);
+      // Removed the console log here as the initial check confirms elements should exist
+      if (element) {
+        const firstValue = firstTouch[field] || '';
+        const lastValue = lastTouch[field] || '';
+        
+        // Format: "FT:first_value||LT:last_value"
+        element.value = `FT:${firstValue}||LT:${lastValue}`;
+      } else {
+        // Log if a specific field is unexpectedly missing after the initial check
+        console.warn(`Element with ID: ${field} was not found during population, though key element was present.`);
+      }
+    });
+    
+    // Alternative: Send complete JSON data in a single field
+    const jsonElement = document.getElementById('attribution_data');
+    if (jsonElement) {
+      const attributionData = {
+        first_touch: firstTouch,
+        last_touch: lastTouch
+      };
+      jsonElement.value = JSON.stringify(attributionData);
+    }
+  } catch (error) {
+    console.warn('Error populating form fields:', error);
+  }
+  
+  return true; // Indicate that fields were populated (or attempted)
 }
+
+/**
+ * Initializes the form field population process with polling.
+ * @param {number} intervalMs - How often to check for the form fields (milliseconds).
+ * @param {number} timeoutMs - Maximum time to wait for the fields (milliseconds).
+ */
+function initializeFormFieldPopulation(intervalMs = 500, timeoutMs = 10000) {
+  let elapsedTime = 0;
+
+  const intervalId = setInterval(() => {
+    elapsedTime += intervalMs;
+    
+    if (tryPopulateFormFields()) {
+      clearInterval(intervalId); // Stop polling once fields are populated
+      console.log("Form fields successfully populated.");
+    } else if (elapsedTime >= timeoutMs) {
+      clearInterval(intervalId); // Stop polling after timeout
+      console.warn(`Form fields could not be populated after ${timeoutMs / 1000} seconds.`);
+    }
+  }, intervalMs);
+}
+
+// Initialize the process
+initializeFormFieldPopulation();

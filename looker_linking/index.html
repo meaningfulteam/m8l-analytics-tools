@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Looker Studio Dashboard Link Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Looker Studio Dashboard Link Generator</h1>
+        
+        <form id="dashboard-form">
+            <div class="form-section">
+                <h2>Basic Settings</h2>
+                <div class="form-group">
+                    <label for="templateDashboardId">Template Dashboard ID or URL:</label>
+                    <input type="text" id="templateDashboardId" class="form-control" placeholder="Enter dashboard ID or paste full URL">
+                    <small class="form-text text-muted">You can paste the full dashboard URL (e.g., https://lookerstudio.google.com/reporting/1234-5678-...) or just the dashboard ID</small>
+                </div>
+                <div class="form-group">
+                    <label for="reportName">Report Name:</label>
+                    <input type="text" id="reportName" class="form-control" placeholder="Enter report name">
+                </div>
+            </div>
+
+            <!-- Add Dashboard Information Section -->
+            <div id="dashboardInfo" class="info-section" style="display:none;">
+                <h3>Dashboard Information</h3>
+                <p>Known data source aliases for this dashboard:</p>
+                <ul>
+                    <li>SITE_IMPRESSION: <span id="siteImpressionAlias">Unknown</span></li>
+                    <li>URL_IMPRESSION: <span id="urlImpressionAlias">Unknown</span></li>
+                </ul>
+                <p class="help-text">Use these aliases when configuring your data sources to ensure they replace the correct sources in the template.</p>
+            </div>
+
+            <div class="form-section">
+                <h2>Data Source Configuration</h2>
+                <div class="data-source-container" id="dataSources">
+                    <div class="data-source" id="dataSource0">
+                        <div class="data-source-header">
+                            <h3>Data Source 1</h3>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="ds0-name">Data Source Name:</label>
+                            <input type="text" id="ds0-name" class="form-control" placeholder="Enter data source name">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="ds0-alias">Data Source Alias:</label>
+                            <input type="text" id="ds0-alias" class="form-control" placeholder="Enter data source alias (e.g., 0, 269)">
+                            <small class="form-text text-muted">Enter the exact alias from the template dashboard for this data source type</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="ds0-connector">Connector Type:</label>
+                            <select id="ds0-connector" class="form-control">
+                                <option value="searchConsole">Google Search Console</option>
+                                <option value="googleAnalytics4">Google Analytics 4</option>
+                                <option value="bigQuery">BigQuery</option>
+                                <option value="googleSheets">Google Sheets</option>
+                                <option value="mysql">MySQL</option>
+                                <option value="postgresql">PostgreSQL</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Google Search Console fields -->
+                        <div class="connector-fields searchConsole-fields">
+                            <div class="form-group">
+                                <label for="ds0-propertyUrl">Property URL</label>
+                                <input type="text" id="ds0-propertyUrl" placeholder="https://example.com/">
+                                <div class="field-description">The URL of your website registered in Search Console. You can find this in your Search Console dashboard under "Properties".</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="ds0-tableType">Table Type</label>
+                                <select id="ds0-tableType" class="form-control">
+                                    <option value="SITE_IMPRESSION">SITE_IMPRESSION</option>
+                                    <option value="URL_IMPRESSION">URL_IMPRESSION</option>
+                                </select>
+                                <small class="form-text text-muted">
+                                    <strong>SITE_IMPRESSION:</strong> Use for domain-level data (typically alias: 0)<br>
+                                    <strong>URL_IMPRESSION:</strong> Use for URL-level data (typically alias: 269)
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label for="ds0-searchType">Search Type</label>
+                                <select id="ds0-searchType">
+                                    <option value="web">Web</option>
+                                    <option value="image">Image</option>
+                                    <option value="video">Video</option>
+                                    <option value="news">News</option>
+                                </select>
+                                <div class="field-description">The type of search data you want to analyze. "Web" is the most common choice.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="ds0-aggregationType">Aggregation Type</label>
+                                <select id="ds0-aggregationType">
+                                    <option value="byProperty">By Property</option>
+                                    <option value="byPage">By Page</option>
+                                </select>
+                                <div class="field-description">How you want to group the Search Console data in your report.</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Google Analytics 4 fields -->
+                        <div class="connector-fields googleAnalytics4-fields" style="display:none;">
+                            <div class="form-group">
+                                <label for="ds0-propertyId">GA4 Property ID</label>
+                                <input type="text" id="ds0-propertyId" placeholder="123456789">
+                                <div class="field-description">Your GA4 property ID (numbers only). Find this in the GA4 Admin area under "Property Settings" - it's the number in the "Property ID" field.</div>
+                            </div>
+                        </div>
+                        
+                        <!-- BigQuery specific fields -->
+                        <div class="connector-fields bigQuery-fields" style="display:none;">
+                            <div class="form-group">
+                                <label for="ds0-projectId">Project ID</label>
+                                <input type="text" id="ds0-projectId">
+                                <div class="field-description">Your BigQuery project ID. Find this in the Google Cloud Console under "IAM & Admin" > "Settings".</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="ds0-datasetId">Dataset ID</label>
+                                <input type="text" id="ds0-datasetId">
+                                <div class="field-description">The ID of your BigQuery dataset. This appears in the BigQuery console next to the dataset name.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="ds0-tableId">Table ID</label>
+                                <input type="text" id="ds0-tableId">
+                                <div class="field-description">The ID of your BigQuery table. This appears in the BigQuery console next to the table name.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="ds0-type">Type</label>
+                                <select id="ds0-type">
+                                    <option value="TABLE">Table</option>
+                                    <option value="VIEW">View</option>
+                                </select>
+                                <div class="field-description">Whether you're connecting to a BigQuery table or view.</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Google Sheets specific fields -->
+                        <div class="connector-fields googleSheets-fields" style="display:none;">
+                            <div class="form-group">
+                                <label for="ds0-spreadsheetId">Spreadsheet ID</label>
+                                <input type="text" id="ds0-spreadsheetId">
+                                <div class="field-description">The ID of your Google Sheet. Find this in the URL: https://docs.google.com/spreadsheets/d/[SPREADSHEET_ID]/edit</div>
+                            </div>
+                        </div>
+                        
+                        <!-- SQL Connectors fields -->
+                        <div class="connector-fields sql-fields" style="display:none;">
+                            <div class="form-group">
+                                <label for="ds0-sql">SQL Query</label>
+                                <textarea id="ds0-sql" rows="4"></textarea>
+                                <div class="field-description">The SQL query to execute against your database.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="data-source-buttons">
+                    <button type="button" id="addDataSource" class="btn-secondary">Add Another Data Source</button>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h2>Advanced Options</h2>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="embedOption">
+                        Generate Embed URL
+                    </label>
+                    <div class="field-description">Enable this to generate a URL for embedding the dashboard into a website or application.</div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button type="button" id="generateUrl" class="btn-primary">Generate URL</button>
+            </div>
+        </form>
+        
+        <div class="result-section" id="resultSection" style="display:none;">
+            <h2>Generated URL</h2>
+            <div class="result-container">
+                <textarea id="generatedUrl" readonly rows="6"></textarea>
+                <button id="copyUrl" class="btn-secondary">Copy URL</button>
+                <a id="openUrl" href="#" target="_blank" class="btn-primary">Open in New Tab</a>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h2>How to Find Your Data</h2>
+            <div class="accordion">
+                <div class="accordion-item">
+                    <div class="accordion-header">Google Search Console Data</div>
+                    <div class="accordion-content">
+                        <p>To connect to your Google Search Console data:</p>
+                        <ol>
+                            <li>Log in to <a href="https://search.google.com/search-console" target="_blank">Google Search Console</a></li>
+                            <li>Select your property from the top-left dropdown menu</li>
+                            <li>Copy the URL of your property to use in the "Property URL" field</li>
+                            <li>The URL should match exactly how it appears in Search Console (including http/https, www or non-www)</li>
+                            <li>For domain properties (without http:// or https://), the app will automatically add the required "sc-domain:" prefix</li>
+                        </ol>
+                        <p><strong>Table Types explained:</strong></p>
+                        <ul>
+                            <li><strong>SITE_IMPRESSION:</strong> Use this for property-level data. This is appropriate for "By Property", "By Country", or "By Device" aggregations.</li>
+                            <li><strong>URL_IMPRESSION:</strong> Use this for page-level data. This is appropriate for "By Page" or "By Query" aggregations.</li>
+                        </ul>
+                        <p><strong>Note:</strong> If you choose an aggregation that doesn't match the selected table type, you may get unexpected results in Looker Studio.</p>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header">Google Analytics 4 Data</div>
+                    <div class="accordion-content">
+                        <p>To find your GA4 Property ID:</p>
+                        <ol>
+                            <li>Log in to <a href="https://analytics.google.com/" target="_blank">Google Analytics</a></li>
+                            <li>Go to Admin (gear icon in the bottom left)</li>
+                            <li>In the Property column, click on "Property Settings"</li>
+                            <li>Find the "Property ID" field - it's a number that usually starts with "2" or "3"</li>
+                            <li>Use only the numeric part (without the "G-" prefix if shown elsewhere)</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header">BigQuery Data</div>
+                    <div class="accordion-content">
+                        <p>To connect to BigQuery, you need three pieces of information:</p>
+                        <ol>
+                            <li>Project ID: Found in Google Cloud Console under "IAM & Admin" > "Settings"</li>
+                            <li>Dataset ID: The name of your dataset in BigQuery</li>
+                            <li>Table ID: The name of the specific table you want to use</li>
+                        </ol>
+                        <p>Make sure you have appropriate permissions set up for the Looker Studio service account to access your BigQuery data.</p>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header">Google Sheets Data</div>
+                    <div class="accordion-content">
+                        <p>To connect to a Google Sheet:</p>
+                        <ol>
+                            <li>Open your Google Sheet in a browser</li>
+                            <li>Look at the URL: https://docs.google.com/spreadsheets/d/<strong>[SPREADSHEET_ID]</strong>/edit</li>
+                            <li>Copy the Spreadsheet ID portion (the long string between /d/ and /edit)</li>
+                            <li>Make sure the Google Sheet is shared with viewing permissions to anyone with the link, or specifically with the Looker Studio service account</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html> 
