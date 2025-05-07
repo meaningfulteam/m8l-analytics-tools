@@ -1,6 +1,6 @@
 /**
- * Retrieves and combines first-touch and last-touch attribution data in form fields
- * Both attribution points are sent through the same form fields with clear separation
+ * Retrieves and populates form fields with first-touch and last-touch attribution data
+ * First touch data goes to fields with "_ft" suffix, last touch data goes to regular fields
  */
 
 // Cookie names defined in tracking_cookies.js
@@ -24,67 +24,12 @@ function getCookie(name) {
 }
 
 /**
- * Combines first-touch and last-touch attribution data for form submission
- * Uses the format "FT:value||LT:value" to separate the two touch points
- */
-function populateFormFields() {
-  try {
-    const firstTouch = getCookie(FIRST_TOUCH_COOKIE) || {};
-    const lastTouch = getCookie(LAST_TOUCH_COOKIE) || {};
-    
-    // Standard UTM fields to populate
-    const utmFields = [
-      'utm_source',
-      'utm_medium', 
-      'utm_campaign',
-      'utm_content',
-      'utm_term'
-    ];
-    
-    // Additional attribution fields to populate if they exist
-    const additionalFields = [
-      'traffic_type',
-      'landing_page',
-      'referrer',
-      'timestamp'
-    ];
-    
-    // Combine both field sets
-    const allFields = [...utmFields, ...additionalFields];
-    
-    // Populate each field with combined data
-    allFields.forEach(field => {
-      const element = document.getElementById(field);
-      console.log(`Looking for element with ID: ${field}. Found:`, element);
-      if (element) {
-        const firstValue = firstTouch[field] || '';
-        const lastValue = lastTouch[field] || '';
-        
-        // Format: "FT:first_value||LT:last_value"
-        element.value = `FT:${firstValue}||LT:${lastValue}`;
-      }
-    });
-    
-    // Alternative: Send complete JSON data in a single field
-    const jsonElement = document.getElementById('attribution_data');
-    if (jsonElement) {
-      const attributionData = {
-        first_touch: firstTouch,
-        last_touch: lastTouch
-      };
-      jsonElement.value = JSON.stringify(attributionData);
-    }
-  } catch (error) {
-    console.warn('Error populating form fields:', error);
-  }
-}
-
-/**
  * Attempts to populate form fields once they are available in the DOM.
- * Uses polling to wait for a key element ('utm_source' by default).
+ * Uses polling to wait for necessary elements to be available.
  */
 function tryPopulateFormFields() {
-  const keyFieldId = 'utm_source'; // A representative field to check for existence
+  // Check for form fields (as a representative check)
+  const keyFieldId = 'utm_source';
   const keyElement = document.getElementById(keyFieldId);
   
   if (!keyElement) {
@@ -118,19 +63,19 @@ function tryPopulateFormFields() {
     // Combine both field sets
     const allFields = [...utmFields, ...additionalFields];
     
-    // Populate each field with combined data
+    // Populate first touch fields (with _ft suffix)
     allFields.forEach(field => {
-      const element = document.getElementById(field);
-      // Removed the console log here as the initial check confirms elements should exist
-      if (element) {
-        const firstValue = firstTouch[field] || '';
-        const lastValue = lastTouch[field] || '';
-        
-        // Format: "FT:first_value||LT:last_value"
-        element.value = `FT:${firstValue}||LT:${lastValue}`;
-      } else {
-        // Log if a specific field is unexpectedly missing after the initial check
-        console.warn(`Element with ID: ${field} was not found during population, though key element was present.`);
+      const ftElement = document.getElementById(`${field}_ft`);
+      if (ftElement) {
+        ftElement.value = firstTouch[field] || '';
+      }
+    });
+    
+    // Populate last touch fields (standard names without suffix)
+    allFields.forEach(field => {
+      const standardElement = document.getElementById(field);
+      if (standardElement) {
+        standardElement.value = lastTouch[field] || '';
       }
     });
     
