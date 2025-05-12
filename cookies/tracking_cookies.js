@@ -1,4 +1,9 @@
 (function () {
+  
+  // TODO:
+  // Agregar lógica para enviar datos ocultos del formulario en este script sin usar el form_script.js
+
+
   // Common constants
   const FIRST_TOUCH_COOKIE = "m8l-first-touch";
   const LAST_TOUCH_COOKIE = "m8l-last-touch";
